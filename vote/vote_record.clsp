@@ -1,0 +1,21 @@
+; This puzzle is designed for recording DAO member's voting decision.
+; DAO members need to send 1 or 2 mojos to the vote puzzle hash. This coin may in unspend status forever because of the transaction fee is more expensive.
+; For preventing impersonal attacks, the governance tokens must in the sender address of this coin and stay in unspent status during the counting stage.
+; For preventing double votes, only the last vote before the deadline is valid.
+(mod
+  (
+    ; Pubkey
+    PUBKEY
+    ; The ID of the coin that saves the proposal details
+    PROPOSAL_COIN_ID
+    ; Platform wallet
+    PLATFORM_PUZHASH
+    ; Current coin amount
+    my_amount
+  )
+  ;Main
+  (list
+    (list AGG_SIG_ME PUBKEY (sha256 PLATFORM_PUZHASH my_amount))
+    (list CREATE_COIN PLATFORM_PUZHASH my_amount)
+  )
+)

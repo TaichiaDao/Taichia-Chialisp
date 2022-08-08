@@ -1,0 +1,44 @@
+;Distribute XCH to multiple recipients based on a distribution list
+(mod
+  (
+    ;Recipient list in format [(puzhash1 . percent1), (puzhash2 . percent2), ...]
+    RECIPIENT
+    ;Refund puzhash while the amount is not enough
+    REFUND_PUZHASH
+    ;Total amount
+    amount
+    ;Transaction fee
+    fee
+  )
+  (defconstant PRECISION 1000000)
+  (include "condition_codes.clib")
+
+  (defun calculate_distribution (recipient mojo_per_share)
+    (if recipient
+      (if (f recipient)
+        (c
+          (list CREATE_COIN (f (f recipient)) (* (r (f recipient)) mojo_per_share))
+          (calculate_distribution (r recipient) mojo_per_share)
+        )
+        ()
+      )
+      ()
+    )
+  )
+
+  ;Main
+  (
+    if (> PRECISION amount)
+    ;The amount is too small, cannot distribute the coin
+    (list
+      (list ASSERT_MY_AMOUNT amount)
+      (list CREATE_COIN REFUND_PUZHASH (- amount fee))
+    )
+    ;Distribute the fund based on the recipient list
+    (c (list ASSERT_MY_AMOUNT amount)
+	   (c (list RESERVE_FEE fee)
+	      (calculate_distribution RECIPIENT (/ (- amount fee) PRECISION))
+	   )
+    )
+  )
+)
