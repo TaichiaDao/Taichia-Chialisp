@@ -5,10 +5,10 @@
     RECIPIENT
     ;Refund puzhash while the amount is not enough
     REFUND_PUZHASH
+    ;Transaction fee
+    FEE
     ;Total amount
     amount
-    ;Transaction fee
-    fee
   )
   (defconstant PRECISION 1000000)
   (include "condition_codes.clib")
@@ -32,12 +32,12 @@
     ;The amount is too small, cannot distribute the coin
     (list
       (list ASSERT_MY_AMOUNT amount)
-      (list CREATE_COIN REFUND_PUZHASH (- amount fee))
+      (list CREATE_COIN REFUND_PUZHASH (- amount FEE))
     )
     ;Distribute the fund based on the recipient list
     (c (list ASSERT_MY_AMOUNT amount)
-	   (c (list RESERVE_FEE fee)
-	      (calculate_distribution RECIPIENT (/ (- amount fee) PRECISION))
+	   (c (list RESERVE_FEE FEE)
+	      (calculate_distribution RECIPIENT (/ (- amount FEE) PRECISION))
 	   )
     )
   )
