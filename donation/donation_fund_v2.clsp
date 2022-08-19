@@ -1,6 +1,5 @@
 ;This is the puzzle for holding donor's XCH. Each donor will have a coin of this puzzle.
 ;The XCH will be distributed to the platform wallet and project wallet.
-;In the refund mode, all Mojo will send back to the donor's wallet
 (mod
   (
     ;Platform wallet
@@ -13,8 +12,10 @@
     DONOR_PUZHASH
     ;Deadline of the project donation
     DEADLINE_TIMESTAMP
-    ; Platform share in percentage
+    ;Platform share in percentage
     PLATFORM_SHARE
+    ;If the donation is refundable
+    REFUNDABLE
     ;ID of this coin
     my_coin_id
     ;Amount of this coin
@@ -27,7 +28,7 @@
   (defconstant PRECISION 10000)
   ;Main
   (
-    if is_refund
+    if (all is_refund REFUNDABLE)
     ;Refund XCH to donor wallet if it passed the deadline
     (list
       (list ASSERT_MY_COIN_ID my_coin_id)
@@ -36,11 +37,21 @@
       (list CREATE_COIN DONOR_PUZHASH amount)
     )
     ;Distribute PLATFORM_SHARE% XCH to the platform wallet, (PRECISION - PLATFORM_SHARE)% XCH to the project wallet
-    (list
-      (list ASSERT_MY_COIN_ID my_coin_id)
-      (list ASSERT_SECONDS_ABSOLUTE DEADLINE_TIMESTAMP)
-      (list CREATE_COIN PROJECT_PUZHASH (* (/ amount PRECISION) (- PRECISION PLATFORM_SHARE)))
-      (list CREATE_COIN PLATFORM_PUZHASH (* (/ amount PRECISION) PLATFORM_SHARE))
+    (
+        if REFUNDABLE
+        (list
+          (list ASSERT_MY_COIN_ID my_coin_id)
+          (list ASSERT_SECONDS_ABSOLUTE DEADLINE_TIMESTAMP)
+          (list CREATE_COIN PROJECT_PUZHASH (* (/ amount PRECISION) (- PRECISION PLATFORM_SHARE)))
+          (list CREATE_COIN PLATFORM_PUZHASH (* (/ amount PRECISION) PLATFORM_SHARE))
+          (list AGG_SIG_UNSAFE PROJECT_PUBKEY (sha256 my_coin_id amount))
+        )
+        (list
+          (list ASSERT_MY_COIN_ID my_coin_id)
+          (list ASSERT_SECONDS_ABSOLUTE DEADLINE_TIMESTAMP)
+          (list CREATE_COIN PROJECT_PUZHASH (* (/ amount PRECISION) (- PRECISION PLATFORM_SHARE)))
+          (list CREATE_COIN PLATFORM_PUZHASH (* (/ amount PRECISION) PLATFORM_SHARE))
+        )
     )
   )
 )

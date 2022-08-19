@@ -13,33 +13,45 @@
     DEADLINE_TIMESTAMP
     ; Platform share in percentage
     PLATFORM_SHARE
+    ;If the donation is refundable
+    REFUNDABLE
+    ;1 XCH can get how many cats
+    EXCHANGE_RATE
     ;Puzzle hash of the tail program with curried public key
-    TAIL_MOD_PUZHASH
+    tail_mod_puzhash
     ;Inner puzzle, project owner can customize this in the future.
     inner_puzzle
     ;Donor wallet
     donor_puzhash
     ;ID of this coin
     my_coin_id
-    ;Amount of the XCH goes to the fund
-    fund_amount
-    ;Amount of the XCH used for minting CATs
-    mint_amount
+    ;Parent coin ID
+    parent_id
+    ;Parent of parent coin ID
+    parent_parent_id
+    ;Amount of the parent coin
+    parent_amount
+    ;Amount of the coin
+    my_amount
   )
   ;Mod puzzle hash of cat.clsp
   (defconstant CAT_MOD_PUZHASH 0x37bef360ee858133b69d595a906dc45d01af50379dad515eb9518abb7c1d2a7a)
   ;Mod puzzle hash of fund_deposit.clsp
-  (defconstant FUND_MOD_PUZHASH 0x84da571180118bba53aa14f42d0f6a779c94b7d5bd097ecddb09942e17d86e27)
+  (defconstant FUND_MOD_PUZHASH 0x86204e2c5ae5d4cf9e18884ccf7c969b4af10e337b93ef6505dde1bd1f3f7576)
   (include "condition_codes.clib")
   (include "curry_and_treehash.clib")
 
   ;main
+  (
+    if (= (sha256 parent_parent_id donor_puzhash parent_amount) parent_id)
     (list
       (list ASSERT_MY_COIN_ID my_coin_id)
-      (list AGG_SIG_UNSAFE PROJECT_PUBKEY (sha256 my_coin_id fund_amount mint_amount))
+      (list ASSERT_MY_PARENT_ID  parent_id)
+      (list AGG_SIG_UNSAFE PROJECT_PUBKEY (sha256 my_coin_id tail_mod_puzhash donor_puzhash my_amount))
       (list CREATE_COIN
         (puzzle-hash-of-curried-function FUND_MOD_PUZHASH
           ;Currying constants in reverse order
+          (sha256tree REFUNDABLE)
           (sha256tree PLATFORM_SHARE)
           (sha256tree DEADLINE_TIMESTAMP)
           (sha256tree donor_puzhash)
@@ -47,16 +59,18 @@
           (sha256tree PROJECT_PUZHASH)
           (sha256tree PLATFORM_PUZHASH)
         )
-        fund_amount
+        (- my_amount (/ (* my_amount EXCHANGE_RATE) 1000000000))
       )
       (list CREATE_COIN
         (puzzle-hash-of-curried-function CAT_MOD_PUZHASH
           ;Currying constants in reverse order
           (sha256tree inner_puzzle)
-          (sha256tree TAIL_MOD_PUZHASH)
+          (sha256tree tail_mod_puzhash)
           (sha256tree CAT_MOD_PUZHASH)
         )
-        mint_amount
+        (/ (* my_amount EXCHANGE_RATE) 1000000000)
       )
     )
+    (x 'Invalid donor wallet')
+  )
 )
